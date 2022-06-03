@@ -1,8 +1,8 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using SuggestionAppUI;
 
-// Add services to the container.
-builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+var builder = WebApplication.CreateBuilder(args);
+
+builder.ConfigureDI();
 
 var app = builder.Build();
 
