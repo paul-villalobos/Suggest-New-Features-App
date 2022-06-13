@@ -16,7 +16,7 @@ public class MongoUserData : IUserData
       return results.ToList();
    }
 
-   public async Task<UserModel> GetUserAsync(string id)
+   public async Task<UserModel> GetUser(string id)
    {
       var results = await _users.FindAsync(x => x.Id == id);
       return results.FirstOrDefault();
