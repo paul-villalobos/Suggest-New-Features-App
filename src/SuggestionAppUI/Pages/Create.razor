@@ -1,5 +1,7 @@
 ﻿@page "/Create"
+@attribute [Authorize]
 @using SuggestionAppUI.Models
+@inject AuthenticationStateProvider authProvider
 @inject ICategoryData categoryData
 @inject ISuggestionData suggestionData
 @inject IUserData userData
@@ -59,8 +61,10 @@
 	protected override async Task OnInitializedAsync()
 	{
 		categories = await categoryData.GetAllCategories();
-		// TODO - replace with user lookup
-		loggedInUser = await userData.GetUserFromAuthenticationAsync("abc-123");
+		
+		var authState = await authProvider.GetAuthenticationStateAsync();
+		string objectId= authState.User.Claims.FirstOrDefault(c => c.Type.Contains("objectidentifier"))?.Value;
+		loggedInUser = await userData.GetUserFromAuthenticationAsync(objectId);
 	}
 
 	private void ClosePage()
