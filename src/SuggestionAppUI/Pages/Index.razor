@@ -4,6 +4,7 @@
 @inject IStatusData statusData
 @inject ISuggestionData suggestionData
 @inject IUserData userData
+@inject AuthenticationStateProvider authProvider
 @inject NavigationManager navManager //Navigate in pages
 @inject ProtectedSessionStorage sessionStorage // Use session storage instead of local in order to give the user access to his filters
 
@@ -29,7 +30,7 @@
 			// <Virtualize> allows to have an infinite scroll list
 			<Virtualize Items="@suggestions" Context="s" OverscanCount="10">
 				<div>
-					<div>
+					<div @onclick="(()=>VoteUp(s))">
 						<div>@GetUpvoteTopText(s)</div>
 						<span class="oi oi-caret-top"></span>
 						<div>@GetUpvoteBottomText(s)</div>
@@ -80,6 +81,7 @@
 </div>
 
 @code {
+	private UserModel loggedInUser;
 	private List<SuggestionModel> suggestions;
 	private List<CategoryModel> categories;
 	private List<StatusModel> statuses;
@@ -93,6 +95,62 @@
 	{
 		categories = await categoryData.GetAllCategories();
 		statuses = await statusData.GetAllStatuses();
+		await LoadAndVerifyUser();
+	}
+
+	private async Task LoadAndVerifyUser()
+	{
+		var authState = await authProvider.GetAuthenticationStateAsync();
+		string objectId = authState.User.Claims.FirstOrDefault(c => c.Type.Contains("objectidentifier"))?.Value;
+
+		if (string.IsNullOrWhiteSpace(objectId)==false)
+		{
+			loggedInUser = await userData.GetUserFromAuthenticationAsync(objectId) ?? new();
+
+			string firstName = authState.User.Claims.FirstOrDefault(c => c.Type.Contains("givenname"))?.Value;
+			string lastName = authState.User.Claims.FirstOrDefault(c => c.Type.Contains("surname"))?.Value;
+			string displayName = authState.User.Claims.FirstOrDefault(c => c.Type.Equals("name"))?.Value;
+			string email = authState.User.Claims.FirstOrDefault(c => c.Type.Contains("email"))?.Value;
+
+			bool isDirty = false;
+
+			if (objectId.Equals(loggedInUser.ObjectIdentifier)==false) 
+			{
+				isDirty = true;
+				loggedInUser.ObjectIdentifier = objectId;
+			}
+			if (firstName.Equals(loggedInUser.FirstName)==false)  { 
+				isDirty = true;
+				loggedInUser.FirstName = firstName;
+			}
+			if (lastName.Equals(loggedInUser.LastName)==false)
+			{
+				isDirty = true;
+				loggedInUser.LastName = lastName;
+			}
+			if (displayName.Equals(loggedInUser.DisplayName)==false) 
+			{
+				isDirty = true;
+				loggedInUser.DisplayName = displayName;
+			}
+			if (email.Equals(loggedInUser.EmalAddress)==false) 
+			{
+				isDirty = true;
+				loggedInUser.EmalAddress = email;
+			}
+
+			if (isDirty)
+			{
+				if (string.IsNullOrWhiteSpace(loggedInUser.Id)) // New User
+				{
+					await userData.CreateUser(loggedInUser);
+				}
+				else
+				{
+					await userData.UpdateUser(loggedInUser);
+				}
+			}
+		}
 	}
 
 	protected async override Task OnAfterRenderAsync(bool firstRender)
@@ -185,6 +243,34 @@
 		await FilterSuggestions();
 	}
 
+	private async Task VoteUp(SuggestionModel suggestion)
+	{
+		if (loggedInUser is not null)
+		{
+			if (suggestion.Author.Id==loggedInUser.Id)
+			{
+				// Can not vote on own suggestion
+				return;
+			}
+			if (suggestion.UserVotes.Add(loggedInUser.Id)==false)
+			{
+				suggestion.UserVotes.Remove(loggedInUser.Id);
+			}
+
+			await suggestionData.UpvoteSuggestion(suggestion.Id, loggedInUser.Id);
+
+			if (isSortedByNew == false)
+			{
+				suggestions = suggestions
+					.OrderByDescending(s => s.UserVotes.Count)
+					.ThenByDescending(s=>s.DateCreated).ToList();
+			}
+		} else
+		{
+			navManager.NavigateTo("/MicrosoftIdentity/Account/SignIn", true);
+		}
+	}
+
 	private string GetUpvoteTopText(SuggestionModel suggestion)
 	{
 		if (suggestion.UserVotes?.Count>0)
@@ -192,7 +278,14 @@
 			return suggestion.UserVotes.Count.ToString("00");
 		} else
 		{
-			return "Click To";
+			if (suggestion.Author.Id==loggedInUser?.Id)
+			{
+				return "Awaiting";
+			}
+			else
+			{
+				return "Click To";
+			}
 		}
 	}
 

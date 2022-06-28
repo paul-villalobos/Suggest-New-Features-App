@@ -62,9 +62,10 @@
 	{
 		categories = await categoryData.GetAllCategories();
 		
-		var authState = await authProvider.GetAuthenticationStateAsync();
-		string objectId= authState.User.Claims.FirstOrDefault(c => c.Type.Contains("objectidentifier"))?.Value;
-		loggedInUser = await userData.GetUserFromAuthenticationAsync(objectId);
+		//var authState = await authProvider.GetAuthenticationStateAsync();
+		//string objectId= authState.User.Claims.FirstOrDefault(c => c.Type.Contains("objectidentifier"))?.Value;
+		//loggedInUser = await userData.GetUserFromAuthenticationAsync(objectId);
+	    loggedInUser = await authProvider.GetUserFromAuth(userData);
 	}
 
 	private void ClosePage()
