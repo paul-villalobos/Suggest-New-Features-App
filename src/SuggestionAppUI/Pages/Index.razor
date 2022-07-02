@@ -8,7 +8,7 @@
 @inject NavigationManager navManager //Navigate in pages
 @inject ProtectedSessionStorage sessionStorage // Use session storage instead of local in order to give the user access to his filters
 
-<h1 class="page-heading text-uppercase mb-4">Features Suggestions</h1>
+<h1 class="page-heading text-uppercase mb-4">Feature Suggestions</h1>
 <div class="suggestion-container">
 	<button @onclick="LoadCreatePage" class="suggest-btn btn btn-outline-light btn-lg text-uppercase">Suggest</button>
 </div>
@@ -336,7 +336,7 @@
             return "suggestion-entry-voted";
         } else
         {
-            return "suggestion-entry-no-voted";
+            return "suggestion-entry-not-voted";
         }
     }
 
